@@ -57,8 +57,8 @@ public class HomeActivity extends AppCompatActivity implements HomeMvpView {
 
     private HomeMvpPresenter<HomeMvpView> mHomePresenter;
 
-    //public String mVideoUrl = "http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4";
-    public String mVideoUrl = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
+    public String mVideoUrl = "http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4";
+    //public String mVideoUrl = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
 //    public String mVideoUrl = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4";
 
 
@@ -235,7 +235,8 @@ public class HomeActivity extends AppCompatActivity implements HomeMvpView {
     }
 
     /**
-     *  Activity paused. Stop the server and cancel pending download
+     *  Activity destroyed. Stop the server, cancel pending download,
+     *  delete partially downloaded file.
      */
     @Override
     public void stopDownloadAndCleanUp() {
@@ -258,24 +259,19 @@ public class HomeActivity extends AppCompatActivity implements HomeMvpView {
 
 
     /**
-     * Activity paused. Pass this data to Presenter
+     * Activity about to be paused. Pass this data to Presenter
      */
     @Override
     protected void onPause() {
-        Log.d("Hola", "onPause");
         mHomePresenter.onActivityPaused();
         super.onPause();
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        //mStartBtn.setEnabled(true);
-    }
-
+    /**
+     * Activity about to be destroyed. Pass this data to Presenter
+     */
     @Override
     protected void onDestroy() {
-        Log.d("Hola", "onDestroy");
         mHomePresenter.onActivityDestroy();
         super.onDestroy();
     }

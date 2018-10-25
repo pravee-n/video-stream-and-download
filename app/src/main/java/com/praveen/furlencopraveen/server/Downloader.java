@@ -144,12 +144,10 @@ public class Downloader implements Runnable {
     }
 
     public void stop() {
-        Log.d("hola", "stopping download");
         downloadInterrupted = true;
 
         File file = new File(mVideo.getPath());
         if (file.exists()) {
-            Log.d("hola", "file deleted");
             file.delete();
         }
     }
