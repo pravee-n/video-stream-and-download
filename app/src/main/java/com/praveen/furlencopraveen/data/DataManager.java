@@ -1,4 +1,7 @@
 package com.praveen.furlencopraveen.data;
 
-public interface DataManager {
+import com.praveen.furlencopraveen.data.file.FileHelper;
+import com.praveen.furlencopraveen.data.sharedPrefs.SharedPrefsHelper;
+
+public interface DataManager extends SharedPrefsHelper, FileHelper {
 }
