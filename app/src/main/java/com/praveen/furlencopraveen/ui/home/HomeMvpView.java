@@ -13,13 +13,13 @@ public interface HomeMvpView extends MvpView {
 
     void showPermissionRationale(PermissionToken token);
 
-    void startVideoFromLocalFile(Video video);
+    void startVideoFromLocalFile(Video video, boolean switchingToLocal);
 
     void startDownloadAndStreamVideo(Video video);
 
     String getVideoUrl();
 
-    void updatePlayerToUseLocalFile(Video video);
-
     void stopDownloadAndCleanUp();
+
+    void stopServer();
 }

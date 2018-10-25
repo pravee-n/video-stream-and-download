@@ -109,7 +109,7 @@ public class Downloader implements Runnable {
                         mFileOutputStream.write(data, 0, len);
                         mFileOutputStream.flush();
                         downloadedBytes += len;
-                        if ((downloadedBytes / 1024) % 100 == 0) {
+                        if ((downloadedBytes / 1024) % 10 == 0) {
                             Log.w(TAG, (downloadedBytes / 1024) + "kb of " + (fileLength / 1024) + "kb");
                         }
                     }

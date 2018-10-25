@@ -1,5 +1,7 @@
 package com.praveen.furlencopraveen.data.file;
 
+import android.os.Environment;
+
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -13,12 +15,21 @@ public class FileUtils {
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         }
-        byte[] hashInBytes = md.digest(url.getBytes(StandardCharsets.UTF_8));
+        byte[] hashInBytes = new byte[0];
+        try {
+            hashInBytes = md.digest(url.getBytes("UTF-8"));
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
 
         StringBuilder sb = new StringBuilder();
         for (byte b : hashInBytes) {
             sb.append(String.format("%02x", b));
         }
         return sb.toString();
+    }
+
+    public static String getVideoDirectory() {
+        return Environment.getExternalStorageDirectory().getAbsolutePath() + "/Furlenco-Praveen/";
     }
 }

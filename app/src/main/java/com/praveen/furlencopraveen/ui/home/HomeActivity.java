@@ -2,20 +2,16 @@ package com.praveen.furlencopraveen.ui.home;
 
 import android.Manifest;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.media.MediaPlayer;
 import android.net.Uri;
-import android.os.Build;
 import android.provider.Settings;
 import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.Snackbar;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.view.Window;
 import android.widget.Button;
 import android.widget.MediaController;
 import android.widget.Toast;
@@ -62,11 +58,9 @@ public class HomeActivity extends AppCompatActivity implements HomeMvpView {
     private HomeMvpPresenter<HomeMvpView> mHomePresenter;
 
     //public String mVideoUrl = "http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4";
-    //public String mVideoUrl = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
-    public String mVideoUrl = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4";
+    public String mVideoUrl = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
+//    public String mVideoUrl = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4";
 
-
-    private MediaPlayer.OnCompletionListener mOnPlaybackCompletionListener;
 
     private Downloader mDownloader;
 
@@ -88,6 +82,7 @@ public class HomeActivity extends AppCompatActivity implements HomeMvpView {
             @Override
             public void onClick(View v) {
                 mHomePresenter.onStartClicked();
+                mStartBtn.setEnabled(false);
             }
         });
     }
@@ -146,51 +141,53 @@ public class HomeActivity extends AppCompatActivity implements HomeMvpView {
      */
     @Override
     public void showPermissionRationale(final PermissionToken token) {
-        AlertDialog.Builder builder;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            builder = new AlertDialog.Builder(this,
-                    android.R.style.Theme_Material_Dialog_Alert);
-        } else {
-            builder = new AlertDialog.Builder(this);
-        }
-
-        builder.setTitle("")
-                .setMessage(getString(R.string.storage_permission_message))
-                .setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
-                    @Override public void onClick(DialogInterface dialog, int which) {
-                        dialog.dismiss();
-                        token.cancelPermissionRequest();
-                    }
-                })
-                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                    @Override public void onClick(DialogInterface dialog, int which) {
-                        dialog.dismiss();
-                        token.continuePermissionRequest();
-                    }
-                })
-                .setOnDismissListener(new DialogInterface.OnDismissListener() {
-                    @Override public void onDismiss(DialogInterface dialog) {
-                        token.cancelPermissionRequest();
-                    }
-                });
-        AlertDialog alertDialog = builder.create();
-        alertDialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        alertDialog.show();
+        PermissionRationaleDialogFragment rationaleDialog = PermissionRationaleDialogFragment.newInstance();
+        rationaleDialog.setPermissionToken(token);
+        rationaleDialog.show(getSupportFragmentManager(), null);
     }
 
 
     @Override
-    public void startVideoFromLocalFile(Video video) {
-        Toast.makeText(mContext, "Playing from local file", Toast.LENGTH_SHORT).show();
+    public void startVideoFromLocalFile(Video video, boolean switchingToLocal) {
+        mStartBtn.setEnabled(false);
+
         mMediaController.setMediaPlayer(mVideoView);
         mVideoView.setMediaController(mMediaController);
         mVideoView.setVideoPath(video.getPath());
         mVideoView.requestFocus();
-        mVideoView.start();
+        mVideoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+            @Override
+            public void onPrepared(MediaPlayer mp) {
+                mMediaController.show();
+            }
+        });
+        if (switchingToLocal) {
+            mVideoView.setOnCompletionListener(null);
+            mServer.stop();
+            Toast.makeText(mContext, "Download complete, would use local file now",
+                    Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(mContext, "Playing from local file",
+                    Toast.LENGTH_SHORT).show();
+            mVideoView.start();
+        }
+
+        mVideoView.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+                mMediaController.show(2000);
+            }
+        });
+
     }
 
+    /**
+     *  Start download thread. Start proxy server and begin
+     *  streaming to videoView
+     */
     @Override
     public void startDownloadAndStreamVideo(Video video) {
+        mStartBtn.setEnabled(false);
         Toast.makeText(mContext, "Downloading and Streaming simultaneously",
                 Toast.LENGTH_SHORT).show();
 
@@ -201,31 +198,31 @@ public class HomeActivity extends AppCompatActivity implements HomeMvpView {
             }
         };
 
-        mDownloader = new Downloader(video, downloaderCallback);
-        mDownloader.startDownload();
+        if (mDownloader == null) {
+            mDownloader = new Downloader(video, downloaderCallback);
+            mDownloader.startDownload();
+        }
 
         mServer = new LocalProxyStreamingServer(new File(video.getPath()));
+
         new Thread(new Runnable() {
             @Override
             public void run() {
                 mServer.init("127.0.0.1");
 
-                runOnUiThread(new Runnable()
-                {
+                runOnUiThread(new Runnable() {
                     @Override
-                    public void run()
-                    {
+                    public void run() {
                         mServer.start();
                         mVideoView.setVideoURI(Uri.parse(mServer.getFileUrl()));
                         mVideoView.requestFocus();
                         mVideoView.start();
-                        mOnPlaybackCompletionListener = new MediaPlayer.OnCompletionListener() {
+                        mVideoView.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                             @Override
                             public void onCompletion(MediaPlayer mp) {
                                 mHomePresenter.onFirstPlaybackComplete();
                             }
-                        };
-                        mVideoView.setOnCompletionListener(mOnPlaybackCompletionListener);
+                        });
                     }
                 });
             }
@@ -237,18 +234,9 @@ public class HomeActivity extends AppCompatActivity implements HomeMvpView {
         return mVideoUrl;
     }
 
-    @Override
-    public void updatePlayerToUseLocalFile(Video video) {
-        Toast.makeText(mContext, "updatePlayerToUseLocalFile", Toast.LENGTH_SHORT).show();
-        mMediaController.setMediaPlayer(mVideoView);
-        mVideoView.setMediaController(mMediaController);
-        mVideoView.setVideoPath(video.getPath());
-        mVideoView.setOnCompletionListener(null);
-
-        mMediaController.show(2000);
-        mServer.stop();
-    }
-
+    /**
+     *  Activity paused. Stop the server and cancel pending download
+     */
     @Override
     public void stopDownloadAndCleanUp() {
         if (mDownloader != null && mDownloader.isRunning()) {
@@ -261,8 +249,33 @@ public class HomeActivity extends AppCompatActivity implements HomeMvpView {
     }
 
     @Override
+    public void stopServer() {
+        if (mServer != null) {
+            mServer.stop();
+        }
+        mStartBtn.setEnabled(true);
+    }
+
+
+    /**
+     * Activity paused. Pass this data to Presenter
+     */
+    @Override
+    protected void onPause() {
+        Log.d("Hola", "onPause");
+        mHomePresenter.onActivityPaused();
+        super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        //mStartBtn.setEnabled(true);
+    }
+
+    @Override
     protected void onDestroy() {
-        Log.d("Hola", "OnDestroy");
+        Log.d("Hola", "onDestroy");
         mHomePresenter.onActivityDestroy();
         super.onDestroy();
     }

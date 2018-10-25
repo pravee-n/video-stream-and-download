@@ -26,7 +26,7 @@ public class HomePresenter<V extends HomeMvpView> extends BasePresenter<V>
 
         // video has been downloaded already, use local file
         if (mVideo != null && getDataManager().doesFileExist(mVideo.getId())) {
-            getMvpView().startVideoFromLocalFile(mVideo);
+            getMvpView().startVideoFromLocalFile(mVideo, false);
         } else {
             // video has not been downloaded yet, download and stream now
             Video video = new Video(getMvpView().getVideoUrl());
@@ -59,8 +59,14 @@ public class HomePresenter<V extends HomeMvpView> extends BasePresenter<V>
 
         // video has been downloaded, use local file for next playbacks
         if (mVideo != null && getDataManager().doesFileExist(mVideo.getId())) {
-            getMvpView().updatePlayerToUseLocalFile(mVideo);
+            getMvpView().startVideoFromLocalFile(mVideo, true);
         }
+    }
+
+    @Override
+    public void onActivityPaused() {
+        getMvpView().stopServer();
+
     }
 
     @Override

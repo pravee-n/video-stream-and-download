@@ -17,5 +17,7 @@ public interface HomeMvpPresenter<V extends HomeMvpView> extends MvpPresenter<V>
 
     void onFirstPlaybackComplete();
 
+    void onActivityPaused();
+
     void onActivityDestroy();
 }
