@@ -1,13 +1,12 @@
-package com.praveen.furlencopraveen;
+package com.praveen.furlencopraveen.ui.base;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
-public class MainActivity extends AppCompatActivity {
+public class BaseActivity extends AppCompatActivity implements MvpView {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
     }
 }
