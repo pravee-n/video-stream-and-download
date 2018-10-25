@@ -25,10 +25,6 @@ public class Downloader implements Runnable {
 
     private static final String TAG = "Downloader";
 
-    private BufferedInputStream mInputStream;
-
-    private FileOutputStream mFileOutputStream;
-
     /**
      * Data status
      */
@@ -88,9 +84,9 @@ public class Downloader implements Runnable {
     @Override
     public void run() {
         while (isRunning()) {
-            mInputStream = null;
+            BufferedInputStream mInputStream = null;
             try {
-                mFileOutputStream = new FileOutputStream(mVideo.getPath());
+                FileOutputStream mFileOutputStream = new FileOutputStream(mVideo.getPath());
                 try {
                     URL url = new URL(mVideo.getUrl());
 
@@ -110,13 +106,14 @@ public class Downloader implements Runnable {
                         mFileOutputStream.flush();
                         downloadedBytes += len;
                         if ((downloadedBytes / 1024) % 10 == 0) {
-                            Log.w(TAG, (downloadedBytes / 1024) + "kb of " + (fileLength / 1024) + "kb");
+                            Log.d(TAG, (downloadedBytes / 1024) + "kb of " +
+                                    (fileLength / 1024) + "kb");
                         }
                     }
 
                     running = false;
                     if (!downloadInterrupted) {
-                        Log.w(TAG, "Download done");
+                        Log.d(TAG, "Download done");
                         mDownloaderCallback.onDownloadComplete(mVideo);
                     }
 
