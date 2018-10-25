@@ -2,7 +2,10 @@ package com.praveen.furlencopraveen.server;
 
 import android.util.Log;
 
+import com.praveen.furlencopraveen.data.model.Video;
+
 import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -10,15 +13,21 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 
-public class VideoDownloader implements Runnable {
+public class Downloader implements Runnable {
 
-    private boolean isRunning = false;
+    private boolean running = false;
 
-    private String videoUrl;
+    private boolean downloadInterrupted = false;
 
-    private String videoFilePath;
+    private Video mVideo;
 
-    private static final String TAG = "VideoDownloader";
+    private DownloaderCallback mDownloaderCallback;
+
+    private static final String TAG = "Downloader";
+
+    private BufferedInputStream mInputStream;
+
+    private FileOutputStream mFileOutputStream;
 
     /**
      * Data status
@@ -30,17 +39,16 @@ public class VideoDownloader implements Runnable {
 
     public static int dataStatus = -1;
 
-    public VideoDownloader(String videoUrl, String videoFilePath) {
-        this.videoUrl = videoUrl;
-        this.videoFilePath = videoFilePath;
+    public Downloader(Video video, DownloaderCallback downloaderCallback) {
+        this.mVideo = video;
+        this.mDownloaderCallback = downloaderCallback;
     }
 
     public void startDownload() {
         Thread thread = new Thread(this);
         thread.start();
-        isRunning = true;
+        running = true;
     }
-
 
     public static boolean isDataReady() {
         dataStatus = -1;
@@ -79,12 +87,12 @@ public class VideoDownloader implements Runnable {
 
     @Override
     public void run() {
-        while (isRunning) {
-            BufferedInputStream input = null;
+        while (isRunning()) {
+            mInputStream = null;
             try {
-                final FileOutputStream out = new FileOutputStream(videoFilePath);
+                mFileOutputStream = new FileOutputStream(mVideo.getPath());
                 try {
-                    URL url = new URL(videoUrl);
+                    URL url = new URL(mVideo.getUrl());
 
                     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
                     connection.connect();
@@ -93,37 +101,56 @@ public class VideoDownloader implements Runnable {
                     }
                     fileLength = connection.getContentLength();
 
-                    input = new BufferedInputStream(connection.getInputStream());
+                    mInputStream = new BufferedInputStream(connection.getInputStream());
                     byte data[] = new byte[1024 * 50];
                     int len;
 
-                    while ((len = input.read(data)) != -1) {
-                        out.write(data, 0, len);
-                        out.flush();
+                    while (((len = mInputStream.read(data)) != -1) && !downloadInterrupted) {
+                        mFileOutputStream.write(data, 0, len);
+                        mFileOutputStream.flush();
                         downloadedBytes += len;
                         if ((downloadedBytes / 1024) % 100 == 0) {
                             Log.w(TAG, (downloadedBytes / 1024) + "kb of " + (fileLength / 1024) + "kb");
                         }
                     }
 
-                    isRunning = false;
-                    Log.w(TAG, "Download done");
+                    running = false;
+                    if (!downloadInterrupted) {
+                        Log.w(TAG, "Download done");
+                        mDownloaderCallback.onDownloadComplete(mVideo);
+                    }
+
                 } catch (MalformedURLException e) {
                     e.printStackTrace();
                 } catch (IOException e) {
                     e.printStackTrace();
                 } finally {
-                    if (out != null) {
-                        out.flush();
-                        out.close();
+                    if (mFileOutputStream != null) {
+                        mFileOutputStream.flush();
+                        mFileOutputStream.close();
                     }
-                    if (input != null) {
-                        input.close();
+                    if (mInputStream != null) {
+                        mInputStream.close();
                     }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    public boolean isRunning() {
+        return running;
+    }
+
+    public void stop() {
+        Log.d("hola", "stopping download");
+        downloadInterrupted = true;
+
+        File file = new File(mVideo.getPath());
+        if (file.exists()) {
+            Log.d("hola", "file deleted");
+            file.delete();
         }
     }
 }

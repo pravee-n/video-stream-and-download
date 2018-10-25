@@ -5,7 +5,7 @@ import java.io.File;
 public interface FileHelper {
     boolean doesFileExist(String fileName);
 
-    String getUniqueFileName();
+    String getUniqueFileNameFromUrl(String url);
 
     String getNewFilePath(String fileName);
 }

@@ -4,15 +4,16 @@ import android.Manifest;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Environment;
 import android.provider.Settings;
 import android.support.constraint.ConstraintLayout;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.widget.Button;
@@ -30,7 +31,9 @@ import com.praveen.furlencopraveen.FurlencoTask;
 import com.praveen.furlencopraveen.R;
 import com.praveen.furlencopraveen.data.DataManager;
 import com.praveen.furlencopraveen.data.model.Video;
-import com.praveen.furlencopraveen.server.VideoDownloadAndPlayService;
+import com.praveen.furlencopraveen.server.Downloader;
+import com.praveen.furlencopraveen.server.DownloaderCallback;
+import com.praveen.furlencopraveen.server.LocalProxyStreamingServer;
 
 import java.io.File;
 
@@ -50,13 +53,23 @@ public class HomeActivity extends AppCompatActivity implements HomeMvpView {
 
     private Context mContext;
 
+    private MediaController mMediaController;
+
     private static final String TAG = "HomeActivity";
 
-    private VideoDownloadAndPlayService videoService;
+    private static LocalProxyStreamingServer mServer;
 
     private HomeMvpPresenter<HomeMvpView> mHomePresenter;
 
-    public String mVideoUrl = "http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4";
+    //public String mVideoUrl = "http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4";
+    //public String mVideoUrl = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
+    public String mVideoUrl = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4";
+
+
+    private MediaPlayer.OnCompletionListener mOnPlaybackCompletionListener;
+
+    private Downloader mDownloader;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,6 +82,8 @@ public class HomeActivity extends AppCompatActivity implements HomeMvpView {
         mHomePresenter = new HomePresenter(dataManager);
         mHomePresenter.onAttach(this);
 
+        mMediaController = new MediaController(this, false);
+
         mStartBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -77,33 +92,6 @@ public class HomeActivity extends AppCompatActivity implements HomeMvpView {
         });
     }
 
-
-    private void startServer() {
-        File videoFile = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Furlenco-Praveen/furlenco-video-alt.mp4");
-        if (videoFile.exists()) {
-            MediaController mediaController = new MediaController(this);
-            mediaController.setMediaPlayer(mVideoView);
-            mVideoView.setMediaController(mediaController);
-            mVideoView.setVideoPath(videoFile.getAbsolutePath());
-            mVideoView.requestFocus();
-            mVideoView.start();
-        } else {
-            String videoPath = "http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4";
-            videoService = VideoDownloadAndPlayService.startServer(this, videoPath, videoFile.getAbsolutePath(), "127.0.0.1", new VideoDownloadAndPlayService.VideoStreamInterface()
-            {
-                @Override
-                public void onServerStart(String videoStreamUrl)
-                {
-                    // use videoStreamUrl to play video through media player
-                    mVideoView.setVideoURI(Uri.parse(videoStreamUrl));
-                    /*MediaController mediaController = new MediaController(HomeActivity.this);
-                    mediaController.setMediaPlayer(mVideoView);
-                    mVideoView.setMediaController(mediaController);*/
-                    mVideoView.start();
-                }
-            });
-        }
-    }
 
 
     /**
@@ -193,31 +181,89 @@ public class HomeActivity extends AppCompatActivity implements HomeMvpView {
 
     @Override
     public void startVideoFromLocalFile(Video video) {
-        MediaController mediaController = new MediaController(this);
-        mediaController.setMediaPlayer(mVideoView);
-        mVideoView.setMediaController(mediaController);
+        Toast.makeText(mContext, "Playing from local file", Toast.LENGTH_SHORT).show();
+        mMediaController.setMediaPlayer(mVideoView);
+        mVideoView.setMediaController(mMediaController);
         mVideoView.setVideoPath(video.getPath());
         mVideoView.requestFocus();
         mVideoView.start();
-        Toast.makeText(mContext, "Permission granted", Toast.LENGTH_SHORT).show();
     }
 
     @Override
     public void startDownloadAndStreamVideo(Video video) {
-        videoService = VideoDownloadAndPlayService.startServer(this, video.getUrl(),
-                video.getPath(), "127.0.0.1", new VideoDownloadAndPlayService.VideoStreamInterface()
+        Toast.makeText(mContext, "Downloading and Streaming simultaneously",
+                Toast.LENGTH_SHORT).show();
+
+        final DownloaderCallback downloaderCallback = new DownloaderCallback() {
+            @Override
+            public void onDownloadComplete(Video video) {
+                mHomePresenter.onDownloadComplete(video);
+            }
+        };
+
+        mDownloader = new Downloader(video, downloaderCallback);
+        mDownloader.startDownload();
+
+        mServer = new LocalProxyStreamingServer(new File(video.getPath()));
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                mServer.init("127.0.0.1");
+
+                runOnUiThread(new Runnable()
                 {
                     @Override
-                    public void onServerStart(String videoStreamUrl)
+                    public void run()
                     {
-                        mVideoView.setVideoURI(Uri.parse(videoStreamUrl));
+                        mServer.start();
+                        mVideoView.setVideoURI(Uri.parse(mServer.getFileUrl()));
+                        mVideoView.requestFocus();
                         mVideoView.start();
+                        mOnPlaybackCompletionListener = new MediaPlayer.OnCompletionListener() {
+                            @Override
+                            public void onCompletion(MediaPlayer mp) {
+                                mHomePresenter.onFirstPlaybackComplete();
+                            }
+                        };
+                        mVideoView.setOnCompletionListener(mOnPlaybackCompletionListener);
                     }
                 });
+            }
+        }).start();
     }
 
     @Override
     public String getVideoUrl() {
         return mVideoUrl;
+    }
+
+    @Override
+    public void updatePlayerToUseLocalFile(Video video) {
+        Toast.makeText(mContext, "updatePlayerToUseLocalFile", Toast.LENGTH_SHORT).show();
+        mMediaController.setMediaPlayer(mVideoView);
+        mVideoView.setMediaController(mMediaController);
+        mVideoView.setVideoPath(video.getPath());
+        mVideoView.setOnCompletionListener(null);
+
+        mMediaController.show(2000);
+        mServer.stop();
+    }
+
+    @Override
+    public void stopDownloadAndCleanUp() {
+        if (mDownloader != null && mDownloader.isRunning()) {
+            mDownloader.stop();
+        }
+
+        if (mServer != null) {
+            mServer.stop();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        Log.d("Hola", "OnDestroy");
+        mHomePresenter.onActivityDestroy();
+        super.onDestroy();
     }
 }

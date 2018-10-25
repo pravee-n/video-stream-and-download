@@ -18,4 +18,8 @@ public interface HomeMvpView extends MvpView {
     void startDownloadAndStreamVideo(Video video);
 
     String getVideoUrl();
+
+    void updatePlayerToUseLocalFile(Video video);
+
+    void stopDownloadAndCleanUp();
 }

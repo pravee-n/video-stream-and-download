@@ -256,18 +256,18 @@ public class LocalProxyStreamingServer implements Runnable
             while (isRunning) {
 
                 // Check if data is ready
-                while (!VideoDownloader.isDataReady())
+                while (!Downloader.isDataReady())
                 {
-                    if (VideoDownloader.dataStatus == VideoDownloader.DATA_READY) {
+                    if (Downloader.dataStatus == Downloader.DATA_READY) {
                         Log.d(TAG, "error in reading bytess**********(Data ready)");
                         break;
-                    } else if (VideoDownloader.dataStatus == VideoDownloader.DATA_CONSUMED) {
+                    } else if (Downloader.dataStatus == Downloader.DATA_CONSUMED) {
                         Log.d(TAG, "error in reading bytess**********(All Data consumed)");
                         break;
-                    } else if (VideoDownloader.dataStatus == VideoDownloader.DATA_NOT_READY) {
+                    } else if (Downloader.dataStatus == Downloader.DATA_NOT_READY) {
                         Log.d(TAG, "error in reading bytess**********(Data not ready)");
-                    } else if (VideoDownloader.dataStatus ==
-                            VideoDownloader.DATA_NOT_AVAILABLE) {
+                    } else if (Downloader.dataStatus ==
+                            Downloader.DATA_NOT_AVAILABLE) {
                         Log.d(TAG, "error in reading bytess**********(Data not available)");
                     }
                     // wait for a second if data is not ready
@@ -297,7 +297,7 @@ public class LocalProxyStreamingServer implements Runnable
                 cbSkip += cbRead;
                 cbSentThisBatch += cbRead;
 
-                VideoDownloader.consumedBytes += cbRead;
+                Downloader.consumedBytes += cbRead;
 
             }
             Log.d(TAG, "cbSentThisBatch: " + cbSentThisBatch);

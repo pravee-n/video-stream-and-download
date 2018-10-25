@@ -2,6 +2,8 @@ package com.praveen.furlencopraveen.server;
 
 import android.app.Activity;
 
+import com.praveen.furlencopraveen.data.model.Video;
+
 import java.io.File;
 
 
@@ -14,13 +16,15 @@ public class VideoDownloadAndPlayService
         this.server = server;
     }
 
-    public static VideoDownloadAndPlayService startServer(final Activity activity, String videoUrl, String pathToSaveVideo, final String ipOfServer, final VideoStreamInterface callback)
+    public static VideoDownloadAndPlayService startServer(final Activity activity,
+                                                          Video video, final String ipOfServer,
+                                                          final DownloaderCallback callback)
     {
-        //new VideoDownloader().execute(videoUrl, pathToSaveVideo);
-        VideoDownloader downloader = new VideoDownloader(videoUrl, pathToSaveVideo);
+        //new Downloader().execute(videoUrl, pathToSaveVideo);
+        Downloader downloader = new Downloader(video, callback);
         downloader.startDownload();
 
-        server = new LocalProxyStreamingServer(new File(pathToSaveVideo));
+        server = new LocalProxyStreamingServer(new File(video.getPath()));
         new Thread(new Runnable()
         {
             @Override
@@ -34,7 +38,7 @@ public class VideoDownloadAndPlayService
                     public void run()
                     {
                         server.start();
-                        callback.onServerStart(server.getFileUrl());
+                        //callback.onServerStart(server.getFileUrl());
                     }
                 });
             }
@@ -49,9 +53,5 @@ public class VideoDownloadAndPlayService
 
     public void stop() {
         server.stop();
-    }
-
-    public static interface VideoStreamInterface{
-        public void onServerStart(String videoStreamUrl);
     }
 }

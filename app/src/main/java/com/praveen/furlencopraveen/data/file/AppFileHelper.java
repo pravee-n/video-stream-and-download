@@ -14,8 +14,8 @@ public class AppFileHelper implements FileHelper {
     }
 
     @Override
-    public String getUniqueFileName() {
-        return UUID.randomUUID().toString() + ".mp4";
+    public String getUniqueFileNameFromUrl(String url) {
+        return FileUtils.MD5FromUrl(url) + ".mp4";
     }
 
     @Override

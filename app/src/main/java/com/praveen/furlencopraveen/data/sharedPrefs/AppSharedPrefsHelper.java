@@ -23,6 +23,7 @@ public class AppSharedPrefsHelper implements SharedPrefsHelper {
 
     public AppSharedPrefsHelper(Context context) {
         this.mPrefs = context.getSharedPreferences(prefFileName, Context.MODE_PRIVATE);
+        this.mGson = new Gson();
     }
 
     @Override

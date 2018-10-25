@@ -31,8 +31,8 @@ public class AppDataManager implements DataManager {
     }
 
     @Override
-    public String getUniqueFileName() {
-        return mFileHelper.getUniqueFileName();
+    public String getUniqueFileNameFromUrl(String url) {
+        return mFileHelper.getUniqueFileNameFromUrl(url);
     }
 
     @Override

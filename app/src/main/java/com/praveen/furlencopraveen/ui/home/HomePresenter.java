@@ -24,14 +24,13 @@ public class HomePresenter<V extends HomeMvpView> extends BasePresenter<V>
         //getMvpView().startVideo();
         mVideo = getDataManager().getVideoFromPrefs(getMvpView().getVideoUrl());
 
-
         // video has been downloaded already, use local file
         if (mVideo != null && getDataManager().doesFileExist(mVideo.getId())) {
             getMvpView().startVideoFromLocalFile(mVideo);
         } else {
             // video has not been downloaded yet, download and stream now
             Video video = new Video(getMvpView().getVideoUrl());
-            String fileName = getDataManager().getUniqueFileName();
+            String fileName = getDataManager().getUniqueFileNameFromUrl(video.getUrl());
             video.setId(fileName);
             video.setPath(getDataManager().getNewFilePath(fileName));
             getMvpView().startDownloadAndStreamVideo(video);
@@ -46,5 +45,26 @@ public class HomePresenter<V extends HomeMvpView> extends BasePresenter<V>
     @Override
     public void onShouldShowPermissionRationale(PermissionToken token) {
         getMvpView().showPermissionRationale(token);
+    }
+
+    @Override
+    public void onDownloadComplete(Video video) {
+        getDataManager().saveToPrefs(video);
+    }
+
+
+    @Override
+    public void onFirstPlaybackComplete() {
+        mVideo = getDataManager().getVideoFromPrefs(getMvpView().getVideoUrl());
+
+        // video has been downloaded, use local file for next playbacks
+        if (mVideo != null && getDataManager().doesFileExist(mVideo.getId())) {
+            getMvpView().updatePlayerToUseLocalFile(mVideo);
+        }
+    }
+
+    @Override
+    public void onActivityDestroy() {
+        getMvpView().stopDownloadAndCleanUp();
     }
 }
