@@ -26,6 +26,21 @@ public class Downloader implements Runnable {
     private static final String TAG = "Downloader";
 
     /**
+     * Keeps track of bytes consumed by player
+     */
+    private int consumedBytes = 0;
+
+    /**
+     * Keeps track of all bytes downloaded
+     */
+    private int downloadedBytes = 0;
+
+    /**
+     * Length of file being downloaded.
+     */
+    private int fileLength = -1;
+
+    /**
      * Data status
      */
     public static final int DATA_READY = 1;
@@ -33,7 +48,7 @@ public class Downloader implements Runnable {
     public static final int DATA_CONSUMED = 3;
     public static final int DATA_NOT_AVAILABLE = 4;
 
-    public static int dataStatus = -1;
+    private int dataStatus = -1;
 
     public Downloader(Video video, DownloaderCallback downloaderCallback) {
         this.mVideo = video;
@@ -46,7 +61,7 @@ public class Downloader implements Runnable {
         running = true;
     }
 
-    public static boolean isDataReady() {
+    public boolean isDataReady() {
         dataStatus = -1;
         boolean res = false;
         if (fileLength == downloadedBytes) {
@@ -65,25 +80,11 @@ public class Downloader implements Runnable {
         return res;
     }
 
-    /**
-     * Keeps track of bytes consumed by player
-     */
-    public static int consumedBytes = 0;
-
-    /**
-     * Keeps track of all bytes downloaded
-     */
-    private static int downloadedBytes = 0;
-
-    /**
-     * Length of file being downloaded.
-     */
-    static int fileLength = -1;
-
 
     @Override
     public void run() {
         while (isRunning()) {
+            Log.d(TAG, "download begins");
             BufferedInputStream mInputStream = null;
             try {
                 FileOutputStream mFileOutputStream = new FileOutputStream(mVideo.getPath());
@@ -147,5 +148,13 @@ public class Downloader implements Runnable {
         if (file.exists()) {
             file.delete();
         }
+    }
+
+    public int getDataStatus() {
+        return dataStatus;
+    }
+
+    public void incrementConsumedBytes(int newBytesConsumed) {
+        this.consumedBytes += newBytesConsumed;
     }
 }

@@ -57,10 +57,9 @@ public class HomeActivity extends AppCompatActivity implements HomeMvpView {
 
     private HomeMvpPresenter<HomeMvpView> mHomePresenter;
 
-    //public String mVideoUrl = "http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4";
-    public String mVideoUrl = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
+    public String mVideoUrl = "http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4";
+    //public String mVideoUrl = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
     //public String mVideoUrl = "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4";
-
 
     private Downloader mDownloader;
 
@@ -147,6 +146,9 @@ public class HomeActivity extends AppCompatActivity implements HomeMvpView {
     }
 
 
+    /**
+     *  Video has been downloaded already. Use local file
+     */
     @Override
     public void startVideoFromLocalFile(Video video, boolean switchingToLocal) {
         mStartBtn.setEnabled(false);
@@ -199,11 +201,12 @@ public class HomeActivity extends AppCompatActivity implements HomeMvpView {
         };
 
         if (mDownloader == null) {
+            Log.d(TAG, "starting downloader");
             mDownloader = new Downloader(video, downloaderCallback);
             mDownloader.startDownload();
         }
 
-        mServer = new LocalProxyStreamingServer(new File(video.getPath()));
+        mServer = new LocalProxyStreamingServer(new File(video.getPath()), mDownloader);
 
         new Thread(new Runnable() {
             @Override

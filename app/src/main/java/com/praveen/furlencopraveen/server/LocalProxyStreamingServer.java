@@ -34,14 +34,17 @@ public class LocalProxyStreamingServer implements Runnable
     private long cbSkip;
     private boolean seekRequest;
     private File mMovieFile;
+    private ExternalResourceDataSource mExternalResourceDataSource;
+    private Downloader mDownloader;
 
     //private boolean supportPlayWhileDownloading = false;
 
     /**
      * This server accepts HTTP request and returns files from device.
      */
-    public LocalProxyStreamingServer(File file) {
+    public LocalProxyStreamingServer(File file, Downloader downloader) {
         mMovieFile = file;
+        mDownloader = downloader;
     }
 
     /**
@@ -131,10 +134,10 @@ public class LocalProxyStreamingServer implements Runnable
                     continue;
                 }
                 Log.d(TAG, "client connected at " + port);
-                ExternalResourceDataSource data = new ExternalResourceDataSource(
+                mExternalResourceDataSource = new ExternalResourceDataSource(
                         mMovieFile);
                 Log.d(TAG, "processing request...");
-                processRequest(data, client);
+                processRequest(mExternalResourceDataSource, client);
             } catch (SocketTimeoutException e) {
                 Log.e(TAG, "No client connected, waiting for client...", e);
                 // Do nothing
@@ -256,18 +259,16 @@ public class LocalProxyStreamingServer implements Runnable
             while (isRunning) {
 
                 // Check if data is ready
-                while (!Downloader.isDataReady())
-                {
-                    if (Downloader.dataStatus == Downloader.DATA_READY) {
+                while (!mDownloader.isDataReady()) {
+                    if (mDownloader.getDataStatus() == Downloader.DATA_READY) {
                         Log.d(TAG, "error in reading bytess**********(Data ready)");
                         break;
-                    } else if (Downloader.dataStatus == Downloader.DATA_CONSUMED) {
+                    } else if (mDownloader.getDataStatus() == Downloader.DATA_CONSUMED) {
                         Log.d(TAG, "error in reading bytess**********(All Data consumed)");
                         break;
-                    } else if (Downloader.dataStatus == Downloader.DATA_NOT_READY) {
+                    } else if (mDownloader.getDataStatus() == Downloader.DATA_NOT_READY) {
                         Log.d(TAG, "error in reading bytess**********(Data not ready)");
-                    } else if (Downloader.dataStatus ==
-                            Downloader.DATA_NOT_AVAILABLE) {
+                    } else if (mDownloader.getDataStatus() == Downloader.DATA_NOT_AVAILABLE) {
                         Log.d(TAG, "error in reading bytess**********(Data not available)");
                     }
                     // wait for a second if data is not ready
@@ -297,13 +298,12 @@ public class LocalProxyStreamingServer implements Runnable
                 cbSkip += cbRead;
                 cbSentThisBatch += cbRead;
 
-                Downloader.consumedBytes += cbRead;
+                mDownloader.incrementConsumedBytes(cbRead);
 
             }
             Log.d(TAG, "cbSentThisBatch: " + cbSentThisBatch);
             // If we did nothing this batch, block for a second
-            if (cbSentThisBatch == 0)
-            {
+            if (cbSentThisBatch == 0) {
                 Log.d(TAG, "Blocking until more data appears");
                 Thread.sleep(1000);
             }
@@ -316,9 +316,11 @@ public class LocalProxyStreamingServer implements Runnable
             Log.e(TAG, "Error streaming file content.", e);
         } finally {
             if (data != null) {
+                Log.d(TAG, "data.close.");
                 data.close();
             }
             client.close();
+            Log.d(TAG, "client.close.");
         }
     }
 
@@ -504,5 +506,9 @@ public class LocalProxyStreamingServer implements Runnable
             Log.d(TAG, "file exists??" + movieResource.exists()
                     + " and content length is: " + contentLength);
         }
+
+        /*private void closeInputStream() {
+
+        }*/
     }
 }
